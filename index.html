@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="hy" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySocial - Հարթակ</title>
+    <style>
+        /* Գլոբալ Գույներ և Անիմացիաներ */
+        :root {
+            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #050505; --text-muted: #65676b;
+            --primary: #FF6B6B; --primary-hover: #ff5252; --input-bg: #f0f2f5; --border: #ced0d4;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08); --nav-bg: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg-color: #18191a; --card-bg: #242526; --text-color: #e4e6eb; --text-muted: #b0b3b8;
+            --primary: #FF6B6B; --primary-hover: #ff8e8e; --input-bg: #3a3b3c; --border: #3e4042;
+            --shadow: 0 4px 12px rgba(0,0,0,0.5); --nav-bg: #242526;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; transition: background 0.3s; padding-top: 70px;}
+        
+        /* Նավիգացիա */
+        .navbar { position: fixed; top: 0; left: 0; width: 100%; display: none; justify-content: space-between; align-items: center; background: var(--nav-bg); padding: 10px 20px; box-shadow: var(--shadow); z-index: 1000; box-sizing: border-box;}
+        .logo { font-size: 24px; font-weight: bold; font-style: italic; color: var(--primary); }
+        .nav-links { display: flex; gap: 20px; align-items: center;}
+        .nav-item { cursor: pointer; font-weight: 500; font-size: 16px; padding: 8px 15px; border-radius: 8px; transition: 0.2s;}
+        .nav-item:hover, .nav-item.active { background: var(--input-bg); color: var(--primary); }
+
+        /* General Forms & Cards */
+        .container { max-width: 500px; margin: 20px auto; display: none; animation: fadeIn 0.4s ease-in-out; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        
+        h2 { text-align: center; margin-bottom: 15px;}
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg); color: var(--text-color); font-size: 15px; font-family: inherit; box-sizing: border-box; }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+        button { width: 100%; padding: 12px; margin-top: 10px; background: var(--primary); color: white; cursor: pointer; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; transition: 0.2s;}
+        button:hover { background: var(--primary-hover); }
+        .text-btn { background: none; color: var(--text-muted); padding: 5px; font-size: 13px; margin:0; width: auto; font-weight: normal;}
+        .text-btn:hover { background: none; color: var(--primary); text-decoration: underline;}
+
+        .link { color: var(--primary); cursor: pointer; text-align: center; display: block; margin-top: 15px; font-weight: bold; }
+
+        /* Հրապարակումների Դիզայն */
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px;}
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #FF6B6B, #FF8E53); color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; text-transform: uppercase;}
+        .post-info { display: flex; flex-direction: column;}
+        .post-author { font-weight: 600; font-size: 15px;}
+        .post-date { font-size: 12px; color: var(--text-muted); }
+        .post-content { font-size: 16px; margin-bottom: 15px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;}
+        
+        .post-actions { display: flex; gap: 15px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 8px 0; margin-bottom: 15px;}
+        .action-flex { display: flex; align-items: center; gap: 5px; color: var(--text-muted); cursor: pointer;}
+        .action-flex:hover { color: var(--primary); }
+
+        .comment-section { display: none; }
+        .comment { display: flex; gap: 10px; margin-top: 12px;}
+        .comment-box { background: var(--input-bg); padding: 10px 15px; border-radius: 18px; flex-grow: 1;}
+        .comment-author { font-weight: bold; font-size: 13px; margin-bottom: 3px;}
+        .comment-text { font-size: 14px; }
+        .comment-input-area { display: flex; gap: 10px; margin-top: 15px; align-items: center;}
+        .send-btn { width: auto; padding: 10px 20px; margin: 0; }
+
+        /* Theme Toggle in Auth */
+        .theme-toggle { position: absolute; top: 15px; right: 15px; background: none; font-size: 24px; width: auto; padding: 0;}
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<!-- === ՆԱՎԻԳԱՑԻԱ (Միայն մուտք գործածների համար) === -->
+<nav class="navbar" id="navbar">
+    <div class="logo">MySocial</div>
+    <div class="nav-links">
+        <span class="nav-item active" id="tab-feed" onclick="switchMainTab('feed')">🌎 Լրահոս</span>
+        <span class="nav-item" id="tab-profile" onclick="switchMainTab('profile')">👤 Իմ Էջը</span>
+        <span class="nav-item" onclick="toggleTheme()" id="themeNavIcon">☀️</span>
+        <span class="nav-item" style="color:red;" onclick="logout()">Ելք</span>
+    </div>
+</nav>
+
+<!-- === ԱՎՏՈՐԻԶԱՑԻԱ === -->
+<div id="authWrapper" style="display:flex; justify-content:center; align-items:center; min-height:80vh;">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeIcon">☀️</button>
+    
+    <div class="container card" id="loginSection" style="display: block;">
+        <h2>Մուտք</h2>
+        <input type="email" id="logEmail" placeholder="Էլ. հասցե">
+        <input type="password" id="logPassword" placeholder="Գաղտնաբառ">
+        <button onclick="login()">Մուտք գործել</button>
+        <span class="link" onclick="switchAuth('register')">Ստեղծել նոր հաշիվ</span>
+    </div>
+
+    <div class="container card" id="registerSection">
+        <h2>Գրանցում</h2>
+        <input type="email" id="regEmail" placeholder="Էլ. հասցե (Gmail)">
+        <input type="password" id="regPassword" placeholder="Ստեղծել գաղտնաբառ">
+        <button onclick="register()">Գրանցվել</button>
+        <span class="link" onclick="switchAuth('login')">Արդեն ունե՞ք հաշիվ</span>
+    </div>
+
+    <div class="container card" id="verifySection">
+        <h2>Հաստատում</h2>
+        <input type="number" id="verifyCode" placeholder="6 նիշանոց կոդը">
+        <button onclick="verify()">Հաստատել մեյլը</button>
+    </div>
+</div>
+
+<!-- === ԼՐԱՀՈՍ ԵՎ ՊՐՈՖԻԼ === -->
+<!-- Պրոֆիլ ստեղծելու հատված (միայն Իմ Էջում կերևա) -->
+<div class="container" id="createPostContainer">
+    <div class="card">
+        <h3>Ի՞նչ կա մտքիդ, <span id="userName"></span>...</h3>
+        <textarea id="postContent" rows="3" placeholder="Գրեք ձեր հրապարակումը այստեղ..."></textarea>
+        <button onclick="createPost()">Հրապարակել</button>
+    </div>
+</div>
+
+<!-- Պոստերի ցուցադրման հատված -->
+<div class="container" id="postsContainer" style="display: none; max-width: 600px;">
+    <!-- Պոստերը կհայտնվեն այստեղ -->
+</div>
+
+<script>
+    let currentUser = null;
+    let currentTab = 'feed'; // 'feed' կամ 'profile'
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const isLight = html.getAttribute('data-theme') === 'light';
+        html.setAttribute('data-theme', isLight ? 'dark' : 'light');
+        document.getElementById('themeIcon').innerText = isLight ? '🌙' : '☀️';
+        if(document.getElementById('themeNavIcon')) document.getElementById('themeNavIcon').innerText = isLight ? '🌙' : '☀️';
+    }
+
+    // ՆՈՐՈԳՎԱԾ ՖՈՒՆԿՑԻԱ (Այստեղ էր վրիպակը)
+    function switchAuth(type) {
+        document.getElementById('loginSection').style.display = type === 'login' ? 'block' : 'none';
+        document.getElementById('registerSection').style.display = type === 'register' ? 'block' : 'none';
+        document.getElementById('verifySection').style.display = type === 'verify' ? 'block' : 'none'; // Այստեղ սխալմամբ դրված էր միշտ 'none'
+    }
+
+    async function register() {
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        if(!email || !password) return alert("Լրացրեք դաշտերը:");
+        
+        const res = await fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        const data = await res.json();
+        
+        if(data.success) { 
+            currentUser = email; 
+            switchAuth('verify'); // Հիմա սա ճիշտ կբացի կոդի դաշտը
+            alert(data.message); 
+        } 
+        else alert(data.message);
+    }
+
+    async function verify() {
+        const code = document.getElementById('verifyCode').value;
+        if(!code) return alert("Խնդրում ենք մուտքագրել կոդը:");
+
+        const res = await fetch('/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser, code }) });
+        const data = await res.json();
+        
+        if(data.success) enterSystem(currentUser); 
+        else alert(data.message);
+    }
+
+    async function login() {
+        const email = document.getElementById('logEmail').value;
+        const password = document.getElementById('logPassword').value;
+        if(!email || !password) return alert("Լրացրեք դաշտերը:");
+
+        const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        const data = await res.json();
+        
+        if(data.success) enterSystem(email); 
+        else alert(data.message);
+    }
+
+    function logout() {
+        currentUser = null;
+        document.getElementById('navbar').style.display = 'none';
+        document.getElementById('createPostContainer').style.display = 'none';
+        document.getElementById('postsContainer').style.display = 'none';
+        document.getElementById('authWrapper').style.display = 'flex';
+        switchAuth('login');
+    }
+
+    // Ներս մտնելու ֆունկցիա
+    function enterSystem(email) {
+        currentUser = email;
+        document.getElementById('userName').innerText = email.split('@')[0];
+        document.getElementById('authWrapper').style.display = 'none';
+        document.getElementById('navbar').style.display = 'flex';
+        switchMainTab('feed'); // Սկզբից մտնում ենք Լրահոս
+    }
+
+    // Tab-ների փոխարկում (Լրահոս vs Իմ Էջը)
+    function switchMainTab(tab) {
+        currentTab = tab;
+        document.getElementById('tab-feed').classList.remove('active');
+        document.getElementById('tab-profile').classList.remove('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+
+        if(tab === 'profile') {
+            document.getElementById('createPostContainer').style.display = 'block';
+        } else {
+            document.getElementById('createPostContainer').style.display = 'none';
+        }
+        
+        document.getElementById('postsContainer').style.display = 'block';
+        loadPosts();
+    }
+
+    // Պոստերի Տրամաբանություն
+    async function createPost() {
+        const content = document.getElementById('postContent').value;
+        if(!content) return;
+        await fetch('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser, content }) });
+        document.getElementById('postContent').value = ''; 
+        loadPosts(); 
+    }
+
+    async function deletePost(id) {
+        if(!confirm("Ջնջե՞լ հրապարակումը:")) return;
+        await fetch(`/posts/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser }) });
+        loadPosts();
+    }
+
+    async function editPost(id) {
+        const newContent = prompt("Մուտքագրեք նոր տեքստը:");
+        if(!newContent) return;
+        await fetch(`/posts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser, newContent }) });
+        loadPosts();
+    }
+
+    async function addComment(id) {
+        const text = document.getElementById(`commentInput-${id}`).value;
+        if(!text) return;
+        await fetch(`/posts/${id}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentUser, text }) });
+        loadPosts();
+    }
+
+    function toggleComments(id) {
+        const section = document.getElementById(`comments-${id}`);
+        section.style.display = section.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Ստանալ պոստերը սերվերից ու նկարել
+    async function loadPosts() {
+        const res = await fetch('/posts');
+        let posts = await res.json();
+        
+        if(currentTab === 'profile') {
+            posts = posts.filter(p => p.author === currentUser);
+        }
+
+        const postsContainer = document.getElementById('postsContainer');
+        postsContainer.innerHTML = ''; 
+
+        if(posts.length === 0) {
+            postsContainer.innerHTML = `<p style="text-align:center; color:gray; margin-top: 20px;">Այստեղ դեռ հրապարակումներ չկան...</p>`;
+            return;
+        }
+
+        posts.forEach(post => {
+            const isMyPost = post.author === currentUser;
+            const authorName = post.author.split('@')[0];
+            const initial = authorName.charAt(0).toUpperCase();
+
+            const commentsHtml = post.comments.map(c => `
+                <div class="comment">
+                    <div class="avatar" style="width:25px; height:25px; font-size:12px;">${c.author.charAt(0).toUpperCase()}</div>
+                    <div class="comment-box">
+                        <div class="comment-author">${c.author.split('@')[0]}</div>
+                        <div class="comment-text">${c.text}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            const postHtml = `
+                <div class="card" style="animation: fadeIn 0.4s ease-in-out;">
+                    <div class="post-header">
+                        <div class="avatar">${initial}</div>
+                        <div class="post-info">
+                            <span class="post-author">${authorName}</span>
+                            <span class="post-date">${post.date}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="post-content">${post.content}</div>
+                    
+                    <div class="post-actions">
+                        <div class="action-flex" onclick="toggleComments('${post.id}')">
+                            💬 <span>${post.comments.length} մեկնաբանություն</span>
+                        </div>
+                        ${isMyPost ? `
+                            <div style="flex-grow:1; text-align:right;">
+                                <button class="text-btn" onclick="editPost('${post.id}')">Փոփոխել</button> |
+                                <button class="text-btn" style="color:#FF6B6B;" onclick="deletePost('${post.id}')">Ջնջել</button>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="comment-section" id="comments-${post.id}">
+                        ${commentsHtml}
+                        <div class="comment-input-area">
+                            <div class="avatar" style="width:30px; height:30px; font-size:14px;">Ք</div>
+                            <input type="text" id="commentInput-${post.id}" placeholder="Գրեք մեկնաբանություն...">
+                            <button class="send-btn" onclick="addComment('${post.id}')">➤</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            postsContainer.innerHTML += postHtml;
+        });
+    }
+</script>
+
+</body>
+</html>
