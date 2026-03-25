@@ -12,10 +12,12 @@ const posts = []; // ՆՈՐ: Այստեղ կպահենք բոլոր հրապար
 
 // Gmail Կարգավորում (ՄԻ ՄՈՌԱՑԻՐ ՓՈԽԵԼ ԳԱՂՏՆԱԲԱՌԸ ԻՐԱԿԱՆՈՎ, ԲԱՅՑ ՍՏԵՂ ՄԻ ԳՐԻ)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Սա կարևոր է 465 պորտի համար
     auth: {
         user: 'yeghiazaryanaleq@gmail.com', 
-        pass: 'rwqeijgsgsygivhk' 
+        pass: 'rwqeijgsgsygivhk' // Քո App Password-ը
     }
 });
 
