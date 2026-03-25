@@ -13,14 +13,15 @@ const posts = []; // ՆՈՐ: Այստեղ կպահենք բոլոր հրապար
 // Gmail Կարգավորում (ՄԻ ՄՈՌԱՑԻՐ ՓՈԽԵԼ ԳԱՂՏՆԱԲԱՌԸ ԻՐԱԿԱՆՈՎ, ԲԱՅՑ ՍՏԵՂ ՄԻ ԳՐԻ)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Պարտադիր է 465-ի համար
+    port: 587,
+    secure: false, // 587-ի համար սա պետք է լինի false
     auth: {
         user: 'yeghiazaryanaleq@gmail.com', 
         pass: 'rwqeijgsgsygivhk' 
     },
     tls: {
-        rejectUnauthorized: false // Սա թույլ է տալիս շրջանցել որոշ սերվերային արգելքներ
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
     }
 });
 
