@@ -49,8 +49,12 @@ app.post('/register', (req, res) => {
         to: email,                     
         subject: 'Հաստատեք ձեր գրանցումը',
         text: `Ձեր կոդն է: ${code}`
-    }, (error) => {
-        if (error) return res.status(500).json({ message: "Նամակը չուղարկվեց:", success: false });
+    }, (error, info) => {
+        if (error) {
+            console.log("GMAIL ERROR:", error); // Սա կերևա Render-ի Logs-ում
+            return res.status(500).json({ message: "Սխալ մեյլի հետ: " + error.message, success: false });
+        }
+        console.log("Email sent: " + info.response);
         res.json({ message: "Կոդը ուղարկվեց մեյլին:", success: true });
     });
 });
