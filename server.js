@@ -14,10 +14,13 @@ const posts = []; // ՆՈՐ: Այստեղ կպահենք բոլոր հրապար
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Սա կարևոր է 465 պորտի համար
+    secure: true, // Պարտադիր է 465-ի համար
     auth: {
         user: 'yeghiazaryanaleq@gmail.com', 
-        pass: 'rwqeijgsgsygivhk' // Քո App Password-ը
+        pass: 'rwqeijgsgsygivhk' 
+    },
+    tls: {
+        rejectUnauthorized: false // Սա թույլ է տալիս շրջանցել որոշ սերվերային արգելքներ
     }
 });
 
