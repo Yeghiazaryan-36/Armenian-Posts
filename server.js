@@ -5,8 +5,8 @@ const app = express();
 
 app.use(express.json());
 
-// --- ԿԱՐԵՎՈՐ: Տեղադրիր քո API Key-ը այստեղ կամ Render-ի Environment Variables-ում ---
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'SG.L8VV9GBSVEDZ3MBTW35KXNPB');
+// Սա ամենաապահով ձևն է
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Ժամանակավոր Բազաներ
 const tempCodes = {}; 
