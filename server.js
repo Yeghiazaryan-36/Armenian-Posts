@@ -13,14 +13,14 @@ const posts = [];
 // 1. Ստեղծում ենք transporter-ը Render-ի համար (Port 587)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, 
+    port: 465,
+    secure: true, // 465-ի համար պարտադիր true
     auth: {
-        user: process.env.GMAIL_USER || 'yeghiazaryanaleq@gmail.com', 
-        pass: process.env.GMAIL_PASS || 'rwqeijgsgsygivhk' 
+        user: 'yeghiazaryanaleq@gmail.com',
+        pass: 'rwqeijgsgsygivhk'
     },
     tls: {
-        rejectUnauthorized: false 
+        rejectUnauthorized: false
     }
 });
 
