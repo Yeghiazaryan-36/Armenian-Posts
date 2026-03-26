@@ -63,6 +63,78 @@ function cleanupExpiredCodes() {
     }
 }
 
+function getEmailDebugInfo() {
+    return {
+        provider: emailProvider,
+        mailFromConfigured: Boolean(MAIL_FROM),
+        resendApiKeyConfigured: Boolean(RESEND_API_KEY),
+        resendFromConfigured: Boolean(RESEND_FROM),
+        smtpHostConfigured: Boolean(SMTP_HOST),
+        smtpUserConfigured: Boolean(SMTP_USER),
+        smtpPassConfigured: Boolean(SMTP_PASS),
+        gmailUserConfigured: Boolean(GMAIL_USER),
+        gmailPasswordConfigured: Boolean(GMAIL_APP_PASSWORD),
+        render: Boolean(process.env.RENDER)
+    };
+}
+
+function getMailErrorMessage(error) {
+    const rawMessage = String(error?.message || '');
+    const lowerMessage = rawMessage.toLowerCase();
+
+    if (lowerMessage.includes('resend_api_key is missing')) {
+        return 'RESEND_API_KEY env-ը բացակայում է։';
+    }
+
+    if (lowerMessage.includes('mail_from is missing')) {
+        return 'MAIL_FROM env-ը բացակայում է։';
+    }
+
+    if (lowerMessage.includes('gmail_user or gmail_app_password is missing')) {
+        return 'GMAIL_USER կամ GMAIL_APP_PASSWORD env-ը բացակայում է։';
+    }
+
+    if (lowerMessage.includes('smtp_host, smtp_user or smtp_pass is missing')) {
+        return 'SMTP_HOST, SMTP_USER կամ SMTP_PASS env-երից մեկը բացակայում է։';
+    }
+
+    if (
+        lowerMessage.includes('you can only send testing emails to your own email address') ||
+        lowerMessage.includes('resend.dev')
+    ) {
+        return 'Resend-ի test sender-ն ես օգտագործում (`onboarding@resend.dev`)։ Դա կարող է ուղարկել միայն քո սեփական email-ին։ Verify արա քո domain-ը Resend-ում ու MAIL_FROM-ը դարձրու օրինակ `noreply@քո-domain.com`։';
+    }
+
+    if (
+        lowerMessage.includes('domain is not verified') ||
+        lowerMessage.includes('domain mismatch')
+    ) {
+        return 'MAIL_FROM-ի domain-ը Resend-ում verify արված չէ կամ չի համընկնում verified domain-ի հետ։';
+    }
+
+    if (lowerMessage.includes('invalid `from` field') || lowerMessage.includes('invalid_from_address')) {
+        return 'MAIL_FROM-ը սխալ format ունի։ Օգտագործիր օրինակ `noreply@քո-domain.com`։';
+    }
+
+    if (lowerMessage.includes('status 401') || lowerMessage.includes('missing api key')) {
+        return 'RESEND_API_KEY-ը սխալ է կամ բացակայում է։';
+    }
+
+    if (lowerMessage.includes('status 403') && lowerMessage.includes('api key is invalid')) {
+        return 'RESEND_API_KEY-ը վավեր չէ։ Ստեղծիր նոր API key Resend dashboard-ից։';
+    }
+
+    if (
+        process.env.RENDER &&
+        (emailProvider === 'smtp' || emailProvider === 'gmail') &&
+        (lowerMessage.includes('timeout') || lowerMessage.includes('econnrefused') || lowerMessage.includes('esocket'))
+    ) {
+        return 'Render free plan-ի վրա SMTP/Gmail-ը հաճախ չի աշխատի, որովհետև SMTP port-երը blocked են։ Օգտագործիր RESEND_API_KEY և HTTP email provider։';
+    }
+
+    return `Չհաջողվեց ուղարկել հաստատման կոդը։ Server log: ${rawMessage}`;
+}
+
 function resolveEmailProvider() {
     if (EMAIL_PROVIDER === 'resend') return 'resend';
     if (EMAIL_PROVIDER === 'smtp') return 'smtp';
@@ -248,7 +320,8 @@ app.get('/health', (req, res) => {
     res.json({
         success: true,
         emailProvider,
-        codesPending: tempCodes.size
+        codesPending: tempCodes.size,
+        email: getEmailDebugInfo()
     });
 });
 
@@ -308,7 +381,7 @@ app.post('/register', async (req, res) => {
         console.error(`[mail] Failed to send verification code to ${email}:`, error.message);
 
         return res.status(500).json({
-            message: 'Չհաջողվեց ուղարկել հաստատման կոդը։ Ստուգիր email provider-ի env-երը։',
+            message: getMailErrorMessage(error),
             success: false
         });
     }
