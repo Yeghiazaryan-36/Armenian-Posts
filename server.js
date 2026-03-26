@@ -8,22 +8,21 @@ app.use(express.json());
 // Ժամանակավոր Բազաներ
 const tempCodes = {}; 
 const users = []; 
-const posts = []; // ՆՈՐ: Այստեղ կպահենք բոլոր հրապարակումները
+const posts = []; 
 
-// Gmail Կարգավորում (ՄԻ ՄՈՌԱՑԻՐ ՓՈԽԵԼ ԳԱՂՏՆԱԲԱՌԸ ԻՐԱԿԱՆՈՎ, ԲԱՅՑ ՍՏԵՂ ՄԻ ԳՐԻ)
+// 1. Ստեղծում ենք transporter-ը Render-ի համար (Port 587)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false, 
     auth: {
-        user: 'yeghiazaryanaleq@gmail.com',
-        pass: 'rwqeijgsgsygivhk' // Համոզվիր, որ այս տառերի մեջ կամ կողքերում բացատներ (space) չկան
+        user: process.env.GMAIL_USER || 'yeghiazaryanaleq@gmail.com', 
+        pass: process.env.GMAIL_PASS || 'rwqeijgsgsygivhk' 
     },
     tls: {
-        rejectUnauthorized: false // Սա շատ կարևոր է Render-ի արգելքը շրջանցելու համար
+        rejectUnauthorized: false 
     }
 });
-
 
 const allowedDomains = ['gmail.com', 'yahoo.com', 'mail.ru', 'yandex.ru', 'outlook.com', 'icloud.com'];
 
@@ -31,30 +30,37 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --- ԱՎՏՈՐԻԶԱՑԻԱ (Գրանցում, Հաստատում, Մուտք) ---
+// --- ԱՎՏՈՐԻԶԱՑԻԱ ---
 app.post('/register', (req, res) => {
     const { email, password } = req.body;
-    const domain = email.split('@')[1].toLowerCase();
+    
+    if (!email || !password) return res.status(400).json({ message: "Լրացրեք բոլոր դաշտերը", success: false });
 
+    const domain = email.split('@')[1]?.toLowerCase();
     if (!allowedDomains.includes(domain)) {
         return res.status(400).json({ 
-            message: "Մենք ընդունում ենք միայն հայտնի էլ. փոստեր (Gmail, Mail.ru, Yahoo և այլն):", 
+            message: "Մենք ընդունում ենք միայն հայտնի էլ. փոստեր (Gmail, Mail.ru և այլն):", 
             success: false 
         });
     }
+
     if (users.find(u => u.email === email)) return res.status(400).json({ message: "Այս մեյլով արդեն կա գրանցված մարդ:", success: false });
 
     const code = Math.floor(100000 + Math.random() * 900000);
     tempCodes[email] = { password, code };
 
-    transporter.sendMail({
-        from: 'yeghiazaryanaleq@gmail.com', 
-        to: email,                     
+    // Նամակի ուղարկում
+    const mailOptions = {
+        from: `"Armenian Posts" <${process.env.GMAIL_USER || 'yeghiazaryanaleq@gmail.com'}>`,
+        to: email,
         subject: 'Հաստատեք ձեր գրանցումը',
-        text: `Ձեր կոդն է: ${code}`
-    }, (error, info) => {
+        text: `Ձեր հաստատման կոդն է: ${code}`,
+        html: `<b>Ձեր հաստատման կոդն է: ${code}</b>`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
-            console.log("GMAIL ERROR:", error); // Սա կերևա Render-ի Logs-ում
+            console.log("GMAIL ERROR:", error);
             return res.status(500).json({ message: "Սխալ մեյլի հետ: " + error.message, success: false });
         }
         console.log("Email sent: " + info.response);
@@ -80,62 +86,49 @@ app.post('/login', (req, res) => {
     else res.json({ message: "Սխալ մուտքանուն կամ գաղտնաբառ:", success: false });
 });
 
-// --- ՆՈՐ ԲԱԺԻՆ: ՀՐԱՊԱՐԱԿՈՒՄՆԵՐ (Posts & Comments) ---
-
-// 1. Ստանալ բոլոր հրապարակումները
+// --- ՀՐԱՊԱՐԱԿՈՒՄՆԵՐ ---
 app.get('/posts', (req, res) => {
     res.json(posts);
 });
 
-// 2. Ստեղծել նոր հրապարակում
 app.post('/posts', (req, res) => {
     const { email, content } = req.body;
     const newPost = {
-        id: Date.now().toString(), // Ստեղծում ենք հատուկ ID ըստ վայրկյանների
+        id: Date.now().toString(),
         author: email,
         content: content,
         date: new Date().toLocaleString('hy-AM'),
-        comments: [] // Դատարկ քոմենթների ցուցակ
+        comments: []
     };
-    posts.unshift(newPost); // unshift-ը գցում է ամենավերևում (նորերը՝ վերևում)
+    posts.unshift(newPost);
     res.json({ success: true, post: newPost });
 });
 
-// 3. Ջնջել հրապարակումը
 app.delete('/posts/:id', (req, res) => {
     const { id } = req.params;
-    const { email } = req.body; // Ստուգում ենք, թե ով է ուզում ջնջել
-
+    const { email } = req.body;
     const postIndex = posts.findIndex(p => p.id === id);
     if (postIndex === -1) return res.json({ success: false, message: "Պոստը չի գտնվել" });
-
-    if (posts[postIndex].author !== email) return res.json({ success: false, message: "Դուք չեք կարող ջնջել այլոց պոստը:" });
-
-    posts.splice(postIndex, 1); // Ջնջում ենք զանգվածից
+    if (posts[postIndex].author !== email) return res.json({ success: false, message: "Իրավունք չունեք ջնջել այլոց պոստը:" });
+    posts.splice(postIndex, 1);
     res.json({ success: true });
 });
 
-// 4. Փոխել հրապարակումը (Edit)
 app.put('/posts/:id', (req, res) => {
     const { id } = req.params;
     const { email, newContent } = req.body;
-
     const post = posts.find(p => p.id === id);
     if (!post) return res.json({ success: false, message: "Պոստը չի գտնվել" });
     if (post.author !== email) return res.json({ success: false, message: "Իրավունք չունեք փոխել սա:" });
-
     post.content = newContent;
     res.json({ success: true });
 });
 
-// 5. Գրել քոմենթ
 app.post('/posts/:id/comments', (req, res) => {
     const { id } = req.params;
     const { email, text } = req.body;
-
     const post = posts.find(p => p.id === id);
     if (!post) return res.json({ success: false, message: "Պոստը չի գտնվել" });
-
     post.comments.push({
         author: email,
         text: text,
@@ -144,6 +137,8 @@ app.post('/posts/:id/comments', (req, res) => {
     res.json({ success: true });
 });
 
-app.listen(3000, () => {
-    console.log("✅ Սերվերը միացված է: Համակարգը պատրաստ է!");
+// Render-ի համար պետք է օգտագործել process.env.PORT
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Սերվերը միացված է ${PORT} պորտի վրա!`);
 });
