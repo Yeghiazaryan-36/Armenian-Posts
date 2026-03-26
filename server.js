@@ -1,28 +1,17 @@
 const express = require('express');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail'); // Օգտագործում ենք SendGrid
 const app = express();
 
 app.use(express.json());
+
+// --- ԿԱՐԵՎՈՐ: Տեղադրիր քո API Key-ը այստեղ կամ Render-ի Environment Variables-ում ---
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'SG.ՔՈ_API_KEY_ԱՅՍՏԵՂ');
 
 // Ժամանակավոր Բազաներ
 const tempCodes = {}; 
 const users = []; 
 const posts = []; 
-
-// 1. Ստեղծում ենք transporter-ը Render-ի համար (Port 587)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // 465-ի համար պարտադիր true
-    auth: {
-        user: 'yeghiazaryanaleq@gmail.com',
-        pass: 'rwqeijgsgsygivhk'
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
 
 const allowedDomains = ['gmail.com', 'yahoo.com', 'mail.ru', 'yandex.ru', 'outlook.com', 'icloud.com'];
 
@@ -31,7 +20,7 @@ app.get('/', (req, res) => {
 });
 
 // --- ԱՎՏՈՐԻԶԱՑԻԱ ---
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) return res.status(400).json({ message: "Լրացրեք բոլոր դաշտերը", success: false });
@@ -49,23 +38,27 @@ app.post('/register', (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000);
     tempCodes[email] = { password, code };
 
-    // Նամակի ուղարկում
-    const mailOptions = {
-        from: `"Armenian Posts" <${process.env.GMAIL_USER || 'yeghiazaryanaleq@gmail.com'}>`,
+    // Նամակի ուղարկում SendGrid-ի միջոցով
+    const msg = {
         to: email,
+        from: 'yeghiazaryanaleq@gmail.com', // Պետք է լինի քո Verified Sender մեյլը SendGrid-ում
         subject: 'Հաստատեք ձեր գրանցումը',
         text: `Ձեր հաստատման կոդն է: ${code}`,
-        html: `<b>Ձեր հաստատման կոդն է: ${code}</b>`
+        html: `<div style="font-family: sans-serif; border: 1px solid #eee; padding: 20px;">
+                <h2>Բարև Ձեզ:</h2>
+                <p>Armenian Posts կայքում գրանցվելու համար օգտագործեք այս կոդը.</p>
+                <h1 style="color: #007bff;">${code}</h1>
+               </div>`,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log("GMAIL ERROR:", error);
-            return res.status(500).json({ message: "Սխալ մեյլի հետ: " + error.message, success: false });
-        }
-        console.log("Email sent: " + info.response);
+    try {
+        await sgMail.send(msg);
+        console.log("Email sent successfully via SendGrid");
         res.json({ message: "Կոդը ուղարկվեց մեյլին:", success: true });
-    });
+    } catch (error) {
+        console.error("SENDGRID ERROR:", error.response ? error.response.body : error);
+        res.status(500).json({ message: "Չհաջողվեց ուղարկել նամակը: Ստուգեք API Key-ը:", success: false });
+    }
 });
 
 app.post('/verify', (req, res) => {
@@ -137,7 +130,6 @@ app.post('/posts/:id/comments', (req, res) => {
     res.json({ success: true });
 });
 
-// Render-ի համար պետք է օգտագործել process.env.PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Սերվերը միացված է ${PORT} պորտի վրա!`);
